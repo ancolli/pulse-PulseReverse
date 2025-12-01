@@ -1,0 +1,18 @@
+//*--------------------------------*- C++ -*----------------------------------*\
+//| =========                 |                                                 |
+//| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+//|  \\    /   O peration     | Version:  2312                                  |
+//|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+//|    \\/     M anipulation  |                                                 |
+//\*---------------------------------------------------------------------------*/
+ 
+totalCurrentDensity
+{
+        type        potentialWallFlux;//
+        libs        ("libpotentialWallFluxFunctionObject.so");//
+	patches     ("wall_CE" "wall_WE");
+
+}
+
+//\*---------------------------------------------------------------------------*/
+

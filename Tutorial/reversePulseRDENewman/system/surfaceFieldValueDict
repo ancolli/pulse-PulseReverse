@@ -1,0 +1,28 @@
+//*--------------------------------*- C++ -*----------------------------------*\
+//| =========                 |                                                 |
+//| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+//|  \\    /   O peration     | Version:  2312                                  |
+//|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+//|    \\/     M anipulation  |                                                 |
+//\*---------------------------------------------------------------------------*/
+ 
+surfaceFieldValueWE1
+{
+    // Mandatory entries (unmodifiable)
+    type            surfaceFieldValue;
+    libs            ("libfieldFunctionObjects.so");
+    valueType    mag;  // Magnitud del desplazamiento
+    // Mandatory entries (runtime modifiable)
+    log          true;
+    fields          (cellMotionU);//cellDisplacement
+    
+    operation       areaAverage;
+    regionType      patch;
+    name            wall_WE1;
+    
+    
+    
+    //functionObjectLibs ("libfieldFunctionObjects.so");
+    //outputControl timeStep;
+}
+//\*---------------------------------------------------------------------------*/

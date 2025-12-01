@@ -1,0 +1,173 @@
+#!/bin/sh
+cd ${0%/*} || exit 1    # run from this directory
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+#: << 'COMMENT'
+
+canCompile || exit 0    # Dynamic code
+# Ruta del archivo controlDict
+controlDictPath="./system/controlDict"
+
+control="rev" #"fwd" 
+time0=0
+timeremesh=60
+endTimeValue=3600 
+#ifwd=-0.0005
+#irev=0.0013
+tfwd=0.25
+trev=0.05
+
+#deltatfwd=0.00025 #$(echo "$tfwd/5" | bc)
+#deltatrev=0.00025 #$(echo "$trev/5" | bc)
+
+mkdir -p results
+mkdir -p logs
+
+restore0Dir
+
+runApplication -s ini blockMesh
+#runApplication -s ini transformPoints -scale "(1 1 10)"
+
+runApplication -s ini foamToSurface cad.stl -latestTime && mv cad.stl constant/triSurface/cad.stl
+runApplication -s ini cartesianMesh #pMesh cartesianMesh tetMesh #
+sed -i '/front/,/}/ s/type[[:space:]]*wall;/type    empty;/' "constant/polyMesh/boundary"
+sed -i '/wall_insulator/,/}/ s/type[[:space:]]*wall;/type    symmetry;/' "constant/polyMesh/boundary"
+runApplication -s ini extrudeMesh   
+runApplication -s ini foamToVTK -latestTime
+
+
+i=0 #
+while python -c "import sys; sys.exit(0 if float('$time0') < float('$endTimeValue') else 1)"; do
+	
+	i=$((i+1))
+	time0=$(python -c "print(round(float($time0) + float($timeremesh), 10))")
+	
+	time0=$(python -c "print(int(float('$time0')) if '$time0'.endswith('.0') else '$time0')")
+	time1=$time0
+	
+	echo "El valor de time0 es: $time0"
+
+	sed -i "s/endTime[[:space:]]\+[0-9.]\+;/endTime\t\t$time0;/g" "system/controlDict"
+
+	runApplication -s "$(python -c "print(float('$time0'))")" $(getApplication) 
+	
+	#runApplication -s "$(python -c "print(float('$time0'))")" transformPoints -scale "(0 0 10)" 
+	runApplication -s "$(python -c "print(float('$time0'))")" foamToSurface cad.stl -latestTime && mv cad.stl constant/triSurface/cad.stl
+    	
+	sed -i "s/\(index[[:space:]]*\)[0-9]\+\(;$\)/\1$i\2/g" "$time0/uniform/time"
+   	
+	runApplication -s "$(python -c "print(float('$time0'))")" foamToVTK -latestTime 
+
+#rm -r results # 
+
+    	cp -r $time0 results/
+    	cp -rf system results/
+    	cp -rf constant results/
+    	
+    	rm -r $time0 # 
+    	mkdir $time0
+
+
+#echo "El valor de i es: $i"
+    
+    
+    #time1=$(python -c "print(float('$time0'))")
+    
+    #echo "El valor de time1 es: $(python -c "print(float('$time1'))")"    
+    #echo "El valor de timeremesh*i es: $(python -c "print(float($timeremesh) * float($i))") "
+    
+#    if [ "$(python -c "print(float('$time1'))")" = "$(python -c "print(float($timeremesh) * float($i))")"  ]; then #if [ "$time1" = "$((timeremesh * (i)))"  ]; then
+    
+     	  	
+    
+    	runApplication -s "$(python -c "print(float('$time0'))")" cartesianMesh #pMesh cartesianMesh tetMesh #
+    	sed -i '/front/,/}/ s/type[[:space:]]*wall;/type    empty;/' "constant/polyMesh/boundary"
+    	sed -i '/wall_insulator/,/}/ s/type[[:space:]]*wall;/type    symmetry;/' "constant/polyMesh/boundary"
+    	
+
+    	
+    	runApplication -s "$(python -c "print(float('$time0'))")" extrudeMesh 
+    	
+    	   
+    	
+    	runApplication -s "$(python -c "print(float('$time0'))")" mapFields results -sourceTime latestTime -consistent # -consistent
+    	#rm $time0/cellMotionU
+    	cp -f 0/pointMotionU 0/codedBC.H $time0/  #0/fi 0/C 0/fi
+    	
+    	#sleep 500 
+    	
+    	#sleep 500
+#    fi
+     
+#    if [ "$control" = "fwd" ]; then    # fwr pulse
+#   	time0=$(python -c "print(round(float($time0) + float($tfwd), 10))")
+
+	#echo $time0    	
+	
+        #sed -i "s/deltaT[[:space:]]\+[0-9.]\+;/deltaT\t\t$deltatfwd;/g" "system/controlDict"
+    	#sed -i 's/maxPot\s\+-\?[0-9.]\+;/maxPot 20;/g' "constant/controlProperties"
+    	#sed -i "s/\bI\s\+-\?[0-9.]\+;/I $ifwd;/g" "constant/controlProperties"
+        
+        #sleep 500
+        
+#    	control="rev"    	
+#    else # Reverse pulse
+    	#time0=$(python -c "print(round(float($time0) + float($trev), 10))")
+#
+    	#echo $time    	
+#    	sed -i "s/endTime[[:space:]]\+[0-9.]\+;/endTime\t\t$time0;/g" "system/controlDict"
+        #sed -i "s/deltaT[[:space:]]\+[0-9.]\+;/deltaT\t\t$deltatrev;/g" "system/controlDict"
+    	#sed -i 's/maxPot\s\+-\?[0-9.]\+;/maxPot -20;/g' "constant/controlProperties"
+    	#sed -i "s/\bI\s\+-\?[0-9.]\+;/I $irev;/g" "constant/controlProperties"
+    	
+#    	control="fwd"
+#    fi
+    
+    #echo $time0
+#    time0=$(python -c "print(int(float('$time0')) if '$time0'.endswith('.0') else '$time0')")
+        
+#    runApplication -s "$(python -c "print(float('$time0'))")" $(getApplication) 
+    
+    #echo $time0
+       
+#    if [ "$(python -c "print(float('$time0'))")" = "$(python -c "print(float($timeremesh) * float($i))")"  ]; then # if [ "$time0" = "$((timeremesh * (i)))" ]; then
+    
+    	  	
+    	
+    	
+    	#cp -r $time0 results/
+    	#cp -rf system results/
+    	#cp -rf constant results/
+    	
+    	#rm -r $time0 # 
+    	
+    	#mkdir $time0 
+    	
+    	
+    	#sleep 500
+    #else  
+    #	cp -r $time0 results/ 	
+    #fi
+    
+    
+    mv log.* logs/  
+    rm -r logs
+    mkdir -p logs
+     
+      
+	dir_to_remove=$(python -c "print(int(float('$time1')) if '$time1'.endswith('.0') else '$time1')")
+	[ "$dir_to_remove" != "0" ] && rm -r "$dir_to_remove"
+    #[ "$time1" != "0" ] && rm -r "$time1"
+    
+done
+[ "$time1" != "0" ] && rm -r "$time0"
+
+
+#mv results/* .
+#rm -r results
+
+runApplication paraview
+#COMMENT
+# ----------------------------------------------------------------- end-of-file

@@ -1,0 +1,165 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                |
+| \\      /  F ield         | cfMesh: A library for mesh generation          | 
+|  \\    /   O peration     |                                                |
+|   \\  /    A nd           | Author: Franjo Juretic                         | 
+|    \\/     M anipulation  | E-mail: franjo.juretic@c-fields.com            |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version   2.0;
+    format    ascii;
+    class     dictionary;
+    location  "system";
+    object    meshDict;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+surfaceFile "constant/triSurface/cad.stl";
+minCellSize 4.999e-5;//.02;//minCellSize 0.1;
+maxCellSize 6.999e-5;
+//boundaryCellSize 2.5e-5;//1e-3;
+keepCellsIntersectingBoundary	0;
+
+
+
+
+localRefinement
+{
+    wall_WE
+    {
+        cellSize  1.9999e-5;
+    } 
+    /*anode
+    {
+        cellSize  2e-5;
+    }*/
+    wall_insulator
+    {
+        cellSize  2.9999e-5;
+    }
+    "front.*" 
+    {
+        cellSize  1.9999e-5;
+    }
+}
+
+
+
+boundaryLayers
+{
+    /*nLayers	2;//2;
+    optimisedLayer 2;
+    optimisationParameters
+    {
+    	nSmoothNormals 5;
+    	maxNumIterations 20;
+    	featureSizeFactor 0.4;
+    	recalculateNormals 1; //0 or  1
+    	relThicknessTol 0.1;    	
+    }*/
+    patchBoundaryLayers
+    {
+
+        wall_WE
+        {
+             allowDiscontinuity	yes;//no;
+             //maxFirstLayerThickness	5e-4;
+             nLayers	2;
+             thicknessRatio	1;//1.2
+        }
+        /*"insulator.*"
+        {
+             allowDiscontinuity	yes;//no;
+             //maxFirstLayerThickness	5e-4;
+             nLayers	2;
+             thicknessRatio	1.2;//1.2
+        }*/
+        
+    }
+}
+
+
+/*objectRefinements
+{
+	refinementBox
+	{
+		cellSize 0.5; // [m]
+		type	box; // or box or sphere or line
+		centre	( 0 0 0);
+		lengthX	4;
+		lengthY	4;
+		lengthZ	4;
+		//refinementThickness 1;
+	}
+}
+
+localRefinement
+{
+	"cyl.*"	
+    	{
+        	cellSize 0.125,; 
+                //      additionalRefinementLevels 6;
+    	}
+
+}
+
+
+
+
+renameBoundary
+{
+	defaultName myWalls;
+	defaultType wall;
+
+	
+
+	newPatchNames
+	{
+		xMin
+		{
+			newName inlet;
+			type patch;
+		}
+	 	xMax	
+		{
+			newName outlet;
+			type patch;
+		}
+	 	yMin	
+		{
+			newName back;
+			type symmetryPlane;
+		}
+	    	yMax	
+		{
+			newName front;
+			type symmetryPlane;
+		}
+	  	zMin	
+		{
+			newName bottom;
+			type symmetryPlane;
+		}
+		zMax	
+		{
+			newName top;
+			type symmetryPlane;
+		}
+		"cyl.*"	
+		{
+			newName cylinder;
+			type wall;
+		}
+	}
+}*/
+
+/*
+workflowControls
+{
+	stopAfter templateGeneration;
+}
+*/
+// ************************************************************************* //

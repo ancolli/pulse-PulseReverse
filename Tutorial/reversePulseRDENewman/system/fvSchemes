@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.4.0                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    default        Euler;//backward;//steadyState; 
+}
+
+gradSchemes
+{
+    default         Gauss linear;//leastSquares;//none;
+    //grad(cellMotionU) Gauss linear;//cellLimited;//Gauss linear;
+    //grad(fi) Gauss linear;//leastSquares;//
+
+}
+
+divSchemes
+{
+    default        none;
+    div(phi,U)      Gauss upwind;//bounded 
+    div(phi,T)      Gauss upwind;
+    div(phi,rho_i)  Gauss upwind;//linear;//
+    div(phi,k)      Gauss upwind;
+    div(phi,epsilon) Gauss upwind;
+    div(phi,omega) Gauss upwind;
+    div(phi,R)      Gauss upwind;
+    div(R)          Gauss upwind;//linear;
+    
+    div(phi,nuTilda) Gauss upwind;//Gauss limitedLinear 1;
+    
+    div(phi,gammaInt)   Gauss upwind;// bounded Gauss linearUpwind grad;//
+    div(phi,ReThetat)   Gauss upwind;//bounded Gauss linearUpwind grad;//
+    
+    div((nuEff*dev2(T(grad(U))))) Gauss linear;
+}
+
+laplacianSchemes
+{
+    default         Gauss linear corrected;//orthogonal;// none;/
+    /*laplacian(diffusivity,cellMotionU) Gauss linear orthogonal;// corrected faceCorrected limited linearFit orthogonal quadraticFit relaxed skewCorrected uncorrected
+    laplacian(keff,fi) Gauss linear corrected; // orthogonal
+    laplacian(alphaEff_c,rho_i) Gauss linear corrected; //orthogonal
+    laplacian(alphaEff_T,T) Gauss linear corrected;
+    laplacian(rAUf,pcorr) Gauss linear corrected;
+    laplacian(rAUf,p_rgh) Gauss linear corrected;
+    laplacian(nuEff,U) Gauss linear corrected;*/
+    
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+
+fluxRequired
+{
+    default         no;
+    fi               ;
+}
+
+
+wallDist
+{
+    method          meshWave;
+    //nRequired       yes;
+}
+
+
+// ************************************************************************* //

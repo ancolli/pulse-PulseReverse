@@ -1,0 +1,110 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Web:      http://www.OpenFOAM.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      rho_i;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "../constant/transportProperties"
+
+dimensions      [0 -3 0 0 1 0 0];
+
+internalField   uniform $rho_i_inf;
+
+boundaryField
+{
+    axis
+    {
+	type            empty;     
+    }
+    
+    "wedge.*"
+    {
+        type            wedge;
+    } 
+    
+    "wall_isolation.*"
+    {
+        type            zeroGradient;//symmetry;
+    }
+
+    wall_WE         
+    {
+        //type            zeroGradient;//symmetry;
+        name            cathodeC_Cu1;
+        type            codedMixed;
+        refValue        $internalField;
+        refGradient     uniform 0;
+        valueFraction   uniform 1;
+	#include        "codedBC_C.H"  
+    }
+
+   
+    wall_CE
+    {
+        //type            zeroGradient;
+        type            codedMixed;
+    
+    refValue        $internalField;
+    refGradient     uniform 0;
+    valueFraction   uniform 1;
+
+    name    wall_CE;   // name of generated BC
+
+    code
+    #{
+        const label& patchID = this->patch().index();      
+        const fvPatch& p = this->patch();                                                  // Actual boundary/patch   	
+        const fvMesh& mesh = patch().boundaryMesh().mesh();
+    	   
+        const volScalarField& fi_ = this->db().objectRegistry::template lookupObject<volScalarField>("fi"); 
+	
+        scalarField delta = 1.0/mesh.deltaCoeffs().boundaryField()[patchID];                                  
+        scalarField fi_boundary = fi_.boundaryField()[patchID];          
+        
+        const volScalarField& Con_ox = this->db().objectRegistry::template lookupObject<volScalarField>("rho_i");   // Desired field 3       
+        scalarField C_boundary = Con_ox.boundaryField()[patchID];               
+    	
+    	const dictionary& kineticProperties = db().lookupObject<IOdictionary>("transportProperties"); 
+    	const dictionary& Results = db().lookupObject<IOdictionary>("Results");
+    	scalar nu_e = readScalar(kineticProperties.lookup("nu_e"));	
+    	 	
+    	scalar Vcell = readScalar(Results.lookup("Vcell"));//    	
+    	//Info<< "Vcell rho_i:" << Vcell << endl;
+    	
+    	scalar D_Cu = readScalar(kineticProperties.lookup("Dmol"));
+	
+        scalar F = readScalar(kineticProperties.lookup("F"));    
+        
+        scalar j0 = readScalar(kineticProperties.lookup("j0_"));
+        scalar bc = readScalar(kineticProperties.lookup("bc_"));
+	scalar ba = readScalar(kineticProperties.lookup("ba_"));
+        scalar C_inf = readScalar(kineticProperties.lookup("rho_i_inf"));  
+        
+        scalar t = readScalar(kineticProperties.lookup("t"));
+        
+        scalarField jota_c = -j0*pow((C_boundary/C_inf),0.42)*exp((Vcell-fi_boundary)/bc);                                     
+        scalarField jota_a = j0*pow((C_boundary/C_inf),0.42)*exp((Vcell-fi_boundary)/ba);                                          
+
+	scalarField k0 = D_Cu/delta;                                                               
+        
+	scalarField a = -0.42/nu_e*(jota_c+jota_a)/C_boundary/F/k0;        
+	scalarField b = (1-0.42)/nu_e*(jota_c+jota_a)/F/k0;                                        
+	                  
+        this->refValue() = b/a;
+        this->refGrad() = 0;
+        this->valueFraction() = a/(1+a);
+    #};
+    }
+   
+}
+
+// ************************************************************************* //

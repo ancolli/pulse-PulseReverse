@@ -1,0 +1,145 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.5                                   |
+|   \\  /    A nd           | Web:      http://www.OpenFOAM.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      fi;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "../constant/controlProperties"
+#include "../constant/Results"
+
+dimensions      [1 2 -3 0 0 -1 0];// V = kg*m^2/(A*s^3)
+
+internalField   uniform 0;//#eval "($maxPot/2)";
+
+boundaryField
+{
+    axis
+    {
+	type            empty;     
+    }
+    
+    "wedge.*"
+    {
+        type            wedge;
+    } 
+    
+    "wall_isolation.*"      
+    {
+        type            zeroGradient;//symmetry;
+    }
+
+    wall_CE       
+    {   
+	       //type		fixedValue;
+	        //value 		uniform $Vcell;//#calc "($Vcell)";//1;
+	//type            codedFixedValue;
+    	//value           uniform $Vcell;//#calc "($maxPot)";//#calc "($Vcell)";
+
+         type            codedMixed;
+    
+         refValue        uniform 0.6;//internalField;//#calc "($maxPot-mag($ref))";//
+         refGradient     uniform 0;
+         valueFraction   uniform 1;
+    // Name of generated boundary condition
+    	name    potentialFixedValue;
+
+    	code
+    	#{
+        	/* //const dictionary& kineticProperties = db().lookupObject<IOdictionary>("transportProperties");
+        	const dictionary& Results = db().lookupObject<IOdictionary>("Results");
+        	const dictionary& controlProperties = db().lookupObject<IOdictionary>("controlProperties");
+        	
+        	scalar Vcell = readScalar(Results.lookup("Vcell"));
+        	//const scalar maxPot = readScalar(controlProperties.lookup("maxPot"));
+        	
+        	//Vcell=(maxPot < 0.0) ? -mag(Vcell) : mag(Vcell); //
+ 		//const dictionary& controlProperties = db().lookupObject<IOdictionary>("controlProperties");
+		//scalar maxPot = readScalar(controlProperties.lookup("maxPot"));
+		//scalar ref = readScalar(controlProperties.lookup("ref"));
+		//Vcell = max(min(Vcell, maxPot),ref); // limited potentials
+        	//Info<< "Vcell: " << Vcell << endl;
+        	operator==(Vcell);*/ 
+        	
+        	
+        	
+        const label& patchID = this->patch().index();              
+        const fvPatch& p = this->patch();                                                  // Actual boundary/patch    	
+        const fvMesh& mesh = patch().boundaryMesh().mesh();
+       
+        const volScalarField& kf_ = this->db().objectRegistry::template lookupObject<volScalarField>("keff");   // Desired field 1
+        const volScalarField& fi_ = this->db().objectRegistry::template lookupObject<volScalarField>("fi"); // Desired field 2
+        const volScalarField& Con_red = this->db().objectRegistry::template lookupObject<volScalarField>("rho_i");   // Desired field 3
+        //const volScalarField& Con_ox = this->db().objectRegistry::template lookupObject<volScalarField>("C_ox");
+
+        scalarField kf_boundary = kf_.boundaryField()[patchID];                                              
+        scalarField fi_boundary = fi_.boundaryField()[patchID]; 
+        scalarField fi_boundaryOld = fi_.oldTime().boundaryField()[patchID];//prevIter(). //fi_.oldTime()                                          
+        scalarField C_boundary = Con_red.boundaryField()[patchID];                            
+	//scalarField C_ox_boundary = Con_ox.boundaryField()[patchID]; 
+        
+        scalarField delta = 1.0/mesh.deltaCoeffs().boundaryField()[patchID]; 
+
+        const dictionary& kineticProperties = db().lookupObject<IOdictionary>("transportProperties");
+        const dictionary& Results = db().lookupObject<IOdictionary>("Results");
+        
+        
+        scalar j0 = readScalar(kineticProperties.lookup("j0_")); 
+        scalar ba = readScalar(kineticProperties.lookup("ba_"));
+        scalar bc = readScalar(kineticProperties.lookup("bc_"));
+	scalar j0_H2= readScalar(kineticProperties.lookup("j0_H2"));
+        scalar bc_H2 = readScalar(kineticProperties.lookup("bc_H2"));
+	scalar E0_H2 = readScalar(kineticProperties.lookup("E0_H2"));
+	
+	scalar C_inf = readScalar(kineticProperties.lookup("rho_i_inf")) ;
+	
+	scalar cap = readScalar(kineticProperties.lookup("cap"));
+	
+	scalar dt = this ->db().time().deltaTValue();
+
+        scalar Vcell = readScalar(Results.lookup("Vcell"));
+        
+        //Info<< "Vcell fi:" << Vcell << endl;
+        
+ 	//const dictionary& controlProperties = db().lookupObject<IOdictionary>("controlProperties");
+	//scalar maxPot = readScalar(controlProperties.lookup("maxPot"));
+	//scalar ref = readScalar(controlProperties.lookup("ref"));
+	//Vcell = max(min(Vcell, maxPot),ref); // limited potentials
+
+        scalarField jota_a = j0*exp((Vcell-fi_boundary)/ba);  //*C_red_boundary/C_Cuinf                  
+        scalarField jota_c = -j0*C_boundary/C_inf*exp((Vcell-fi_boundary)/bc);
+        scalarField jota_secondary = 0.0*j0_H2*exp((Vcell-fi_boundary-E0_H2)/bc_H2);
+        
+	//scalarField jota3 = j0_O2*exp((Vcell-fi_boundary-E0_O2)/ba_O2);
+	scalarField k0 = kf_boundary/delta;
+                                                         
+        scalarField A = (1/k0)*(jota_a/ba+jota_c/bc+jota_secondary/bc_H2+cap/dt);//               
+	scalarField B = (1/k0)*((1+fi_boundary/ba)*jota_a+(1+fi_boundary/bc)*jota_c+(1+fi_boundary/bc_H2)*jota_secondary-cap/dt*(fi_boundary-2*fi_boundaryOld)); //
+         
+        this->refValue() = B/A;
+        this->refGrad() = 0;
+        this->valueFraction() = A/(A+1);        	
+        	
+    	#};
+    }
+
+    wall_WE     
+    {
+        name            cathode_fi;
+        type            codedMixed;
+        refValue        uniform 0;//uniform #calc "(mag($ref))";//$internalField;//
+        refGradient     uniform 0;
+        valueFraction   uniform 1;
+        #include        "codedBC_fi.H"       
+    }  
+}
+
+// ************************************************************************* //

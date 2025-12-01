@@ -1,0 +1,46 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      mapFieldsDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Specify how to map patches. There are three different options:
+// - patch exists in the source case: specify mapping (patchMap)
+// - patch should be interpolated from internal values in source case
+//   (cuttingPatches)
+// - patch should not be mapped. Default if not in patchMap or cuttingPatches
+
+// List of pairs of target/source patches for mapping
+patchMap (
+//anode anode
+//cathode cathode
+//isulator isulator
+//frontAndBack frontAndBack
+//front front
+//wall_isolation wall_isolation
+);//lid movingWall
+// List of target patches cutting the source domain (these need to be
+// handled specially e.g. interpolated from internal values)
+
+//mapMethod "mapNearest"; //cellPointInterpolate//"cellPointInterpolate";//
+
+cuttingPatches (
+//wall_anode
+//wall_sphere
+//wall_cathode
+//wall_isolation
+);
+
+
+
+
+// ************************************************************************* //

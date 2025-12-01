@@ -1,0 +1,72 @@
+#!/bin/sh
+cd ${0%/*} || exit 1    # run from this directory
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+canCompile || exit 0    # Dynamic code
+# Ruta del archivo controlDict
+controlDictPath="./system/controlDict"
+
+time=0
+endTimeValue=5400 
+ifwd=0.002 #0.01
+tfwd=30
+
+deltatfwd=0.2 #$(echo "$tfwd/30" | bc)
+
+mkdir -p results
+mkdir -p logs
+
+restore0Dir
+
+runApplication -s ini blockMesh
+
+runApplication -s ini foamToSurface cad.stl -latestTime && mv cad.stl constant/triSurface/cad.stl
+runApplication -s ini foamToVTK -latestTime
+
+#: << 'COMMENT'
+i=0
+while python -c "import sys; sys.exit(0 if float('$time') < float('$endTimeValue') else 1)"; do
+i=$((i+1))
+
+    time1=$time 
+    
+    runApplication -s "$(python -c "print(float('$time'))")" cartesianMesh #pMesh cartesianMesh tetMesh #
+
+    sed -i '/front/,/}/ s/type[[:space:]]*wall;/type    empty;/' "constant/polyMesh/boundary"
+
+    runApplication -s "$(python -c "print(float('$time'))")" extrudeMesh
+          
+   	time=$(echo "$time + $tfwd" | bc)
+    	
+	sed -i "s/endTime[[:space:]]\+[0-9]\+;/endTime\t\t$time;/g" "system/controlDict"
+	sed -i 's/deltaT[[:space:]]\+[0-9]\+;/deltaT\t\t'"$deltatfwd"';/g' "system/controlDict"
+    	sed -i 's/maxPot\s\+-\?[0-9.]\+;/maxPot 3;/g' "constant/controlProperties"
+    	sed -i "s/\bI\s\+-\?[0-9.]\+;/I $ifwd;/g" "constant/controlProperties"
+    
+    runApplication -s "$(python -c "print(float('$time'))")" $(getApplication) 
+    	
+    runApplication -s "$(python -c "print(float('$time'))")" foamToSurface cad.stl -latestTime && mv cad.stl constant/triSurface/cad.stl
+    	
+    sed -i "s/\(index[[:space:]]*\)[0-9]\+\(;$\)/\1$i\2/g" "$time/uniform/time"
+    	
+    runApplication -s "$(python -c "print(float('$time'))")" foamToVTK -latestTime  
+    	
+    cp -r $time results/
+    mv log.* logs/   	
+    rm -r $time
+    mkdir $time 
+    cp -f 0/fi 0/pointMotionU 0/codedBC.H $time/ 
+    
+    [ "$time1" != "0" ] && rm -r "$time1"
+         
+done
+[ "$time1" != "0" ] && rm -r "$time"
+
+#mv results/* .
+#rm -r results
+
+runApplication paraview
+#COMMENT
+# ----------------------------------------------------------------- end-of-file
